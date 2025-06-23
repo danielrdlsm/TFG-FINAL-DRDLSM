@@ -14,7 +14,6 @@ import pandas as pd
 
 EXCEL_PATH = "participantes.xlsx"
 
-
 def inicializar_excel():
     if not os.path.exists(EXCEL_PATH):
         df = pd.DataFrame(columns=["nombre", "sesion", "escena"])
@@ -338,7 +337,7 @@ def empezar_aplicacion():
 
     seconds = 0
     running = True
-
+    crear_rutas() #Crea las rutas de los vídeos si no existen
 
 def parar_aplicacion():
     global running, video_actual, video_inicio_segundos
@@ -508,9 +507,6 @@ def normalizar_nombre(nombre):
     nombre = nombre.replace(" ", "_")
     nombre = nombre.replace("ñ", "n").replace("Ñ", "N")
     return nombre
-
-
-
 
 def subir_videos_gafas(tipo="neutro"):
     if tipo == "ansioso":
@@ -761,6 +757,44 @@ def borrar_videos_carpeta(videos_a_borrar):
     else:
         messagebox.showinfo("Éxito", "Vídeos borrados correctamente.")
 
+
+def borrar_videos_ansiosos(videos_a_borrar):
+    import shlex
+    errores = []
+
+    for video in videos_a_borrar:
+        base = re.sub(r'\.[^.]+$', '', video)
+        archivos_a_borrar = [f"{base}.mp4"] + [f"{base}{ext}" for ext in EXTENSIONES_EXTRA_BORRAR]
+
+        for archivo in archivos_a_borrar:
+            ruta = f"/sdcard/Movies/EscenariosAnsiosos/{archivo}"
+            ruta_quoted = shlex.quote(ruta)
+
+            comando = f'adb shell rm {ruta_quoted}'
+
+            try:
+                resultado = subprocess.run(
+                    comando,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    shell=True,
+                    text=True,
+                    encoding='utf-8'
+                )
+                if resultado.returncode != 0 and "No such file" not in resultado.stderr:
+                    errores.append(archivo)
+                    print(f"Error al borrar {archivo}: {resultado.stderr}")
+            except Exception as e:
+                errores.append(archivo)
+                print(f"Excepción al borrar {archivo}: {e}")
+
+    if errores:
+        messagebox.showerror("Error", f"No se pudieron borrar: {', '.join(errores)}")
+    else:
+        messagebox.showinfo("Éxito", "Vídeos ansiosos borrados correctamente.")
+
+
+
 def pestaña_videos_gafas():
     print("Crea pestaña con los videos en las gafas")
     videos = obtener_lista_videos()
@@ -796,6 +830,70 @@ def pestaña_videos_gafas():
     boton_borrar.pack(pady=10)
 
     ventana.mainloop()
+
+def pestaña_videos_ansiosos():
+    videos = cargar_videos_ansiosos()
+
+    if not videos:
+        messagebox.showwarning("Sin vídeos", "No se encontraron vídeos ansiosos en las gafas.")
+        return
+
+    ventana = tk.Toplevel()
+    ventana.title("Videos Ansiosos en Gafas")
+
+    lista_videos = tk.Listbox(ventana, selectmode=tk.MULTIPLE, width=50)
+    lista_videos.pack(padx=10, pady=10)
+
+    for video in videos:
+        lista_videos.insert(tk.END, video)
+
+    def borrar_seleccionados():
+        seleccion = [lista_videos.get(i) for i in lista_videos.curselection()]
+        if not seleccion:
+            messagebox.showwarning("Nada seleccionado", "Selecciona al menos un vídeo para borrar.")
+            return
+        confirmar = messagebox.askyesno("Confirmar", f"¿Seguro que quieres borrar {len(seleccion)} vídeo(s)?")
+        if confirmar:
+            borrar_videos_ansiosos(seleccion)
+            lista_videos.delete(0, tk.END)
+            for video in cargar_videos_ansiosos():
+                lista_videos.insert(tk.END, video)
+            crear_botones_videos_ansiosos_en_frame()
+
+    boton_borrar = tk.Button(ventana, text="Borrar seleccionados", command=borrar_seleccionados)
+    boton_borrar.pack(pady=10)
+
+def pestaña_videos_neutros():
+    videos = cargar_videos_gafas()  # Usa la función que ya tienes para neutros
+
+    if not videos:
+        messagebox.showwarning("Sin vídeos", "No se encontraron vídeos neutros en las gafas.")
+        return
+
+    ventana = tk.Toplevel()
+    ventana.title("Escenas Neutros en Gafas")
+
+    lista_videos = tk.Listbox(ventana, selectmode=tk.MULTIPLE, width=50)
+    lista_videos.pack(padx=10, pady=10)
+
+    for video in videos:
+        lista_videos.insert(tk.END, video)
+
+    def borrar_seleccionados():
+        seleccion = [lista_videos.get(i) for i in lista_videos.curselection()]
+        if not seleccion:
+            messagebox.showwarning("Nada seleccionado", "Selecciona al menos un vídeo para borrar.")
+            return
+        confirmar = messagebox.askyesno("Confirmar", f"¿Seguro que quieres borrar {len(seleccion)} vídeo(s)?")
+        if confirmar:
+            borrar_videos_carpeta(seleccion)
+            lista_videos.delete(0, tk.END)
+            for video in cargar_videos_gafas():
+                lista_videos.insert(tk.END, video)
+            crear_botones_videos_desde_carpeta()
+
+    boton_borrar = tk.Button(ventana, text="Borrar seleccionados", command=borrar_seleccionados)
+    boton_borrar.pack(pady=10)
 
 def crear_botones_imagenes_desde_carpeta():
     carpeta = filedialog.askdirectory()
@@ -842,6 +940,20 @@ def get_device_ip(device):
         '''
         return None
 
+def crear_rutas():
+    ruta_remota1 = "/sdcard/Movies/EscenariosAnsiosos"
+    ruta_remota2 = "/sdcard/Movies/EscenariosNeutros"
+
+    comando1 = f'adb shell "mkdir -p {ruta_remota1}"'
+    comando2 = f'adb shell "mkdir -p {ruta_remota2}"'
+    try:
+        subprocess.run(comando1, shell=True, check=True)
+        print(f"Ruta creada o ya existente: {ruta_remota1}")
+
+        subprocess.run(comando2, shell=True, check=True)
+        print(f"Ruta creada o ya existente: {ruta_remota2}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error creando la ruta remota: {e}")
 
 def connect_devices_adb():
     devices = adb.device_list()
@@ -855,6 +967,7 @@ def connect_devices_adb():
         for _ in range(1):
             subprocess.call(f"adb connect {match.group(1)}")
             return True
+
     except Exception as e:
         print(f"Error getting IP: {e}")
         if "Can't find any android device/emulator" in str(e):
@@ -887,7 +1000,8 @@ def list_devices_tcpip():
 
 def start_scrcpy(serial, extra_args=None):
     try:
-        scrcpy_path = r"C:\Users\danie\OneDrive\Escritorio\TFG-Final\scrcpy-win64-v3.2\scrcpy.exe"
+        scrcpy_path = r"C:\Users\Incluverso\Documents\TFG_Dani\TFG-FINAL-DRDLSM-main\scrcpy-win64-v3.2\scrcpy.exe"
+        #scrcpy_path = r"C:\Users\danie\OneDrive\Escritorio\TFG-Final\scrcpy-win64-v3.2\scrcpy.exe"
         print("Starting scrcpy with device:", serial)
         command = [
             scrcpy_path,
@@ -958,8 +1072,8 @@ def mostrar_imagen_en_panel(path):
     except Exception as e:
         print(f"No se pudo mostrar la imagen: {e}")
 
-
 def reorganizar_botones(event=None):
+    botones = [boton_empezar, boton_parar]
     ancho = root.winfo_width()
     if ancho < 800:
         for i, b in enumerate(botones):
@@ -1106,9 +1220,10 @@ entry_id.grid(row=0, column=1, sticky="ew", padx=5)
 entry_sesion = tk.Entry(frame_superior, state="readonly")
 entry_sesion.grid(row=0, column=3, sticky="ew", padx=5)
 
+'''
 # === Botones principales + Timer ===
 frame_botones = tk.Frame(frame_izquierda)
-frame_botones.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+frame_botones.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
 
 botones = [
     tk.Button(frame_botones, text="EMPEZAR APLICACIÓN", bg="lightgreen"),
@@ -1122,8 +1237,28 @@ for b in botones:
 
 frame_timer = tk.LabelFrame(frame_botones, text="Timer")
 frame_timer.grid(row=0, column=3, rowspan=2, padx=10)
+'''
 
+# === Botones principales + Timer ===
+frame_botones = tk.Frame(frame_izquierda)
+frame_botones.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
 
+# Configurar 3 columnas internas en frame_botones
+frame_botones.columnconfigure(0, weight=1)
+frame_botones.columnconfigure(1, weight=1)
+frame_botones.columnconfigure(2, weight=1)
+
+# Crear botones
+boton_empezar = tk.Button(frame_botones, text="EMPEZAR APLICACIÓN", bg="lightgreen")
+boton_parar = tk.Button(frame_botones, text="PARAR APLICACIÓN", bg="red", fg="white")
+
+# Ubicar botones en columnas separadas
+boton_empezar.grid(row=0, column=0, sticky="ew", padx=5)
+boton_parar.grid(row=0, column=1, sticky="ew", padx=5)
+
+# Crear y ubicar el timer
+frame_timer = tk.LabelFrame(frame_botones, text="Timer")
+frame_timer.grid(row=0, column=2, sticky="ew", padx=5)
 
 # === Frame Participante ===
 frame_participante = tk.LabelFrame(frame_botones, text="Participante")
@@ -1147,8 +1282,8 @@ timer_label.pack(padx=5, pady=(5, 2))
 btn_restart = tk.Button(frame_timer, text="Restart", command=reset_timer)
 btn_restart.pack(pady=(0, 5))
 
-botones[0].config(command=lambda: [registrar_boton("EMPEZAR APLICACIÓN"), empezar_aplicacion()])
-botones[1].config(command=lambda: [registrar_boton("PARAR APLICACIÓN"), parar_aplicacion()])
+boton_empezar.config(command=lambda: [registrar_boton("EMPEZAR APLICACIÓN"), empezar_aplicacion()])
+boton_parar.config(command=lambda: [registrar_boton("PARAR APLICACIÓN"), parar_aplicacion()])
 
 '''
 # === Frame tareas ===
@@ -1239,7 +1374,8 @@ frame_videos_dinamicos = tk.LabelFrame(frame_izquierda, text="Videos de Carpeta"
 frame_videos_dinamicos.grid(row=9, column=0, sticky="ew", padx=10, pady=(0, 10))
 
 btn_cargar_videos = tk.Button(
-    frame_videos_dinamicos,
+    frame_
+    os_dinamicos,
     text="Seleccionar carpeta de videos",
     command=crear_botones_videos_desde_carpeta
 )
@@ -1257,8 +1393,9 @@ frame_videos_dinamicos = tk.LabelFrame(frame_izquierda, text="Videos 360 - Escen
 frame_videos_dinamicos.grid(row=9, column=0, sticky="ew", padx=10, pady=(0, 10))
 
 # Subframe para los botones de cargar y borrar en la misma fila pero en dos columnas
-frame_botones = tk.Frame(frame_videos_dinamicos)
-frame_botones.pack(fill="x", padx=5, pady=5)
+frame_botones_neutros = tk.Frame(frame_videos_dinamicos)
+frame_botones_neutros.pack(fill="x", padx=5, pady=5)
+
 
 def subir_videos_ansiosos():
     archivos = filedialog.askopenfilenames(
@@ -1397,26 +1534,25 @@ def crear_botones_videos_ansiosos_en_frame():
             fila += 1
 
 
-
-
 btn_cargar_videos = tk.Button(
-    frame_botones,
+    frame_botones_neutros,
     text="Subir videos",
-    command=subir_videos_ansiosos
+    command=subir_videos_gafas
 )
-
 
 btn_borrar_videos = tk.Button(
-    frame_botones,
+    frame_botones_neutros,
     text="Borrar vídeos",
-    command=pestaña_videos_gafas
+    command=pestaña_videos_neutros
 )
+
 
 btn_cargar_videos.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
 btn_borrar_videos.grid(row=0, column=1, padx=5, pady=5, sticky="ew")
 
-frame_botones.grid_columnconfigure(0, weight=1)
-frame_botones.grid_columnconfigure(1, weight=1)
+frame_botones_neutros.grid_columnconfigure(0, weight=1)
+frame_botones_neutros.grid_columnconfigure(1, weight=1)
+
 
 btn_cargar_videos = tk.Button(
     frame_videos_dinamicos,
@@ -1436,6 +1572,11 @@ frame_videos_dinamicos_ansioso.grid(row=10, column=0, sticky="ew", padx=10, pady
 frame_botones = tk.Frame(frame_videos_dinamicos_ansioso)
 frame_botones.pack(fill="x", padx=5, pady=5)
 
+frame_botones_neutros = tk.Frame(frame_videos_dinamicos)
+frame_botones_neutros.pack(fill="x", padx=5, pady=5)
+
+
+
 btn_cargar_videos = tk.Button(
     frame_botones,
     text="Subir videos",
@@ -1445,7 +1586,7 @@ btn_cargar_videos = tk.Button(
 btn_borrar_videos = tk.Button(
     frame_botones,
     text="Borrar vídeos",
-    command=pestaña_videos_gafas
+    command=pestaña_videos_ansiosos
 )
 
 btn_cargar_videos.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
@@ -1465,8 +1606,6 @@ btn_cargar_videos.pack(fill="x", padx=5, pady=5)
 
 frame_galeria_videos = tk.Frame(frame_videos_dinamicos)
 frame_galeria_videos.pack(fill="both", expand=True)
-
-
 
 frame_galeria_videos_ansiosos = tk.Frame(frame_videos_dinamicos_ansioso)
 frame_galeria_videos_ansiosos.pack(fill="both", expand=True)
@@ -1560,18 +1699,17 @@ def ver_vista_tablet():
     import numpy as np
     from tkinter import Toplevel, Label
 
-    # Obtener la IP automáticamente desde el primer dispositivo ADB conectado
     devices = list_devices_tcpip()
     if not devices:
-        messagebox.showerror("Sin conexión", "No se detectó ninguna tablet conectada por ADB en red.")
+        messagebox.showerror("Error", "No se detectó ningún dispositivo conectado por ADB.")
         return
 
-    ip = get_device_ip(devices[0])  # Ya tienes esta función en tu código
+    ip = get_device_ip(devices[0])
     if not ip:
-        messagebox.showerror("Error", "No se pudo obtener la IP de la tablet.")
+        messagebox.showerror("Error", "No se pudo obtener la IP del dispositivo desde ADB.")
         return
 
-    url = f"http://{ip}:8080/stream.mjpeg"  # URL específica de ScreenStream
+    url = f"http://{ip}:8080/stream.mjpeg"
 
     cap = cv2.VideoCapture(url)
     if not cap.isOpened():
@@ -1579,7 +1717,7 @@ def ver_vista_tablet():
         return
 
     ventana = Toplevel()
-    ventana.title(f"Vista de la Tablet ({ip})")
+    ventana.title(f"Vista de los biosensores ({ip})")  # ← Cambio aquí
     lbl = Label(ventana)
     lbl.pack()
 
