@@ -82,15 +82,15 @@ def incrementar_sesion(nombre):
     return None
 
 
-# Carpeta para guardar pacientes
+
 PARTICIPANTES_DIR = "participantes"
 
 if not os.path.exists(PARTICIPANTES_DIR):
     os.makedirs(PARTICIPANTES_DIR)
 
-# === Inicializacion ===
+
 historial_botones = []
-participantes = {}  # {nombre: sesión_actual}
+participantes = {} 
 participante_actual = None
 
 videos_gafas = []
@@ -135,21 +135,21 @@ def abrir_video(ruta):
     try:
         nombre_video = os.path.basename(ruta)
 
-        # cerrar anterior
+
         if video_actual:
             duracion = seconds - video_inicio_segundos
             minutos = duracion // 60
             segundos_restantes = duracion % 60
             registrar_boton(f"Fin de video: {video_actual} (duración: {minutos:02}:{segundos_restantes:02})")
 
-        # abrir nuevo
+
         subprocess.Popen([ruta], shell=True)
         registrar_boton(f"Inicio de video: {nombre_video}")
 
         video_actual = nombre_video
         video_inicio_segundos = seconds
 
-        # actualizar excel
+
         if participante_actual and "ansioso" in ruta.lower():
             actualizar_ultima_escena(participante_actual, nombre_video)
 
@@ -337,7 +337,7 @@ def empezar_aplicacion():
 
     seconds = 0
     running = True
-    crear_rutas() #Crea las rutas de los vídeos si no existen
+    crear_rutas()
 
 def parar_aplicacion():
     global running, video_actual, video_inicio_segundos
@@ -358,7 +358,7 @@ def parar_aplicacion():
 
     registrar_boton("PARAR APLICACIÓN")
 
-    # Marca final del video #
+
     if video_actual:
         duracion = seconds - video_inicio_segundos
         minutos = duracion // 60
@@ -367,15 +367,14 @@ def parar_aplicacion():
         video_actual = None
         video_inicio_segundos = None
 
-    # Registrar duración total de la sesión
+
     minutos = seconds // 60
     segundos_restantes = seconds % 60
     historial_botones.append(f"Duración total de la sesión: {minutos:02}:{segundos_restantes:02}")
 
 
 
-# === Agregar participante
-
+# AÑADIR PARTICIPANTE
 def agregar_participante():
     global participante_actual
 
@@ -425,7 +424,7 @@ def cargar_escenas_gafas():
         f = f.strip()
         if f and not (f.endswith('.meta') or f.endswith('.manifest')):
             assetbundles.append(f)
-    # print("Escenas:", assetbundles)
+
     return assetbundles
 
 
@@ -501,8 +500,7 @@ def adb_push(local_path, remote_path):
 
 import unicodedata
 
-import shutil  # Para copiar archivos temporalmente
-
+import shutil
 def normalizar_nombre(nombre):
     nombre = nombre.replace(" ", "_")
     nombre = nombre.replace("ñ", "n").replace("Ñ", "N")
@@ -587,7 +585,7 @@ def subir_videos_gafas(tipo="neutro"):
 
 
 def cargar_videos_gafas():
-    # print("hola")
+
     devices = [ip for ip in list_devices_tcpip() if ip.strip() != ""]
     device = adb.device(devices[0])
     output = device.shell('ls /sdcard/Movies/EscenariosNeutros')
@@ -650,16 +648,14 @@ def crear_botones_videos_desde_carpeta():
         ruta_img_jpg = f"/sdcard/Movies/EscenariosNeutros/{base_name}.jpg"
         ruta_img_png = f"/sdcard/Movies/EscenariosNeutros/{base_name}.png"
 
-        #print(f"Buscando imagen para video: {video}")
+
 
         ruta_imagen = None
         if archivo_existe_en_dispositivo(ruta_img_jpg):
             ruta_imagen = copiar_imagen_desde_dispositivo(ruta_img_jpg)
         elif archivo_existe_en_dispositivo(ruta_img_png):
             ruta_imagen = copiar_imagen_desde_dispositivo(ruta_img_png)
-        #print(ruta_imagen)
 
-        # Crear un subframe para miniatura + texto
         marco_video = tk.Frame(frame_galeria_videos)
 
         if ruta_imagen:
@@ -685,12 +681,11 @@ def crear_botones_videos_desde_carpeta():
             btn.image = img_transparente_tk
             btn.pack()
 
-        # Etiqueta con el nombre del video (sin extensión, más limpio)
         nombre_video_sin_extension = os.path.splitext(os.path.basename(video))[0]
         etiqueta = tk.Label(marco_video, text=nombre_video_sin_extension, font=font_texto, wraplength=160)
         etiqueta.pack()
 
-        # Posicionar el marco en la cuadrícula
+
         marco_video.grid(row=fila, column=columna, padx=5, pady=5)
 
         columna += 1
@@ -702,9 +697,7 @@ def crear_botones_videos_desde_carpeta():
 
 global frame_galeria_videos
 
-# Extensiones a mostrar
 EXTENSIONES_VISIBLES = ('.mp4', '.avi', '.mov', '.mkv')
-# Extensiones a eliminar como "extra" junto con vídeos seleccionados
 EXTENSIONES_EXTRA_BORRAR = ('.jpg', '.png')
 
 def obtener_lista_videos():
@@ -733,7 +726,7 @@ def borrar_videos_carpeta(videos_a_borrar):
             ruta = f"/sdcard/Movies/EscenariosNeutros/{archivo}"
             ruta_quoted = shlex.quote(ruta)
 
-            # Ejecutar como string completo para evitar errores de codificación
+
             comando = f'adb shell rm {ruta_quoted}'
 
             try:
@@ -743,7 +736,7 @@ def borrar_videos_carpeta(videos_a_borrar):
                     stderr=subprocess.PIPE,
                     shell=True,
                     text=True,
-                    encoding='utf-8'  # esto es importante
+                    encoding='utf-8'
                 )
                 if resultado.returncode != 0 and "No such file" not in resultado.stderr:
                     errores.append(archivo)
@@ -820,7 +813,7 @@ def pestaña_videos_gafas():
         confirmar = messagebox.askyesno("Confirmar", f"¿Seguro que quieres borrar {len(seleccion)} vídeo(s)?")
         if confirmar:
             borrar_videos_carpeta(seleccion)
-            # Actualizar lista
+
             lista_videos.delete(0, tk.END)
             for video in obtener_lista_videos():
                 lista_videos.insert(tk.END, video)
@@ -864,7 +857,7 @@ def pestaña_videos_ansiosos():
     boton_borrar.pack(pady=10)
 
 def pestaña_videos_neutros():
-    videos = cargar_videos_gafas()  # Usa la función que ya tienes para neutros
+    videos = cargar_videos_gafas()
 
     if not videos:
         messagebox.showwarning("Sin vídeos", "No se encontraron vídeos neutros en las gafas.")
@@ -916,8 +909,7 @@ def crear_botones_imagenes_desde_carpeta():
                 img = Image.open(ruta_completa)
                 img.thumbnail((60, 60))
                 img_tk = ImageTk.PhotoImage(img)
-                imagenes_miniaturas.append(img_tk)  # evitar que se borre de memoria
-
+                imagenes_miniaturas.append(img_tk)
                 btn = tk.Button(frame_imagenes_dinamicas, image=img_tk,
                                 command=lambda path=ruta_completa: mostrar_imagen_en_panel(path))
                 btn.pack(side="left", padx=3, pady=3)
@@ -925,7 +917,7 @@ def crear_botones_imagenes_desde_carpeta():
                 print(f"Error cargando {archivo}: {e}")
 
 
-##NUEVO MARTA##
+##NUEVO##
 def get_device_ip(device):
     try:
         device = adb.device(device)
@@ -1030,7 +1022,7 @@ def mirror_hmd_view():
     else:
         print("No devices found")
 
-
+ #BATERIA
 def actualizar_bateria(device, battery_entry):
     device = adb.device(serial=device)
     if device:
@@ -1038,12 +1030,12 @@ def actualizar_bateria(device, battery_entry):
             output = device.shell("dumpsys battery | grep level")
             battery_level = int(output.strip().split(":")[1])
 
-            # Update Entry
+
             battery_entry.configure(state="normal")
             battery_entry.delete(0, tk.END)
             battery_entry.insert(0, f"{battery_level}%")
 
-            # Update color based on battery level
+
             color = "red" if battery_level < 20 else "black"
             battery_entry.configure(fg=color)
             battery_entry.configure(state="readonly")
@@ -1060,7 +1052,7 @@ def start_battery_monitoring(device, battery_entry, root, interval_ms=60000):
     update()
 
 
-##TERMINA NUEVO MARTA##
+
 
 def mostrar_imagen_en_panel(path):
     try:
@@ -1087,7 +1079,7 @@ def reorganizar_botones(event=None):
 
 
 '''
-# === Setup device ===
+
 
 devices = list_devices_tcpip()
 if len(devices) > 0:
@@ -1107,7 +1099,7 @@ else:
 '''
 inicializar_excel()
 
-# === Root window ===
+
 root = tk.Tk()
 root.title("Interfaz adaptable")
 
@@ -1117,7 +1109,7 @@ root.attributes("-fullscreen", True)
 '''
 root.geometry("1200x700")
 
-# === Barra herramientas ===
+
 toolbar = tk.Frame(root, bd=1, relief="raised", bg="#f0f0f0")
 toolbar.pack(side="top", fill="x")
 
@@ -1158,7 +1150,7 @@ btn_salir.pack(side="right", padx=2, pady=2)
 btn_ventana = tk.Button(toolbar, text="Modo ventana", command=lambda: root.attributes("-fullscreen", False))
 btn_ventana.pack(side="left", padx=2, pady=2)
 '''
-# === Contenido principal ===
+
 frame_contenido = tk.Frame(root)
 frame_contenido.pack(fill="both", expand=True)
 
@@ -1170,8 +1162,7 @@ frame_contenido.columnconfigure(0, weight=1)
 
 frame_contenido.rowconfigure(0, weight=1)
 
-# Para quitar el scroll==
-# === scrol izquierda ===
+
 frame_scroll = tk.Frame(frame_contenido)
 frame_scroll.grid(row=0, column=0, sticky="nsew")
 
@@ -1185,12 +1176,12 @@ canvas_izquierda.configure(yscrollcommand=scrollbar_izquierda.set)
 scrollbar_izquierda.pack(side="right", fill="y")
 canvas_izquierda.pack(side="left", fill="both", expand=True)
 
-# Marco real donde van los widgets
+# MARCO IZQUIERDO
 frame_izquierda = tk.Frame(canvas_izquierda)
 canvas_izquierda.create_window((0, 0), window=frame_izquierda, anchor="nw", tags="contenedor")
 
 
-# Ajustar scroll al tamaño del contenido
+# AJUSTE SCROLL
 def ajustar_scroll(event):
     canvas_izquierda.configure(scrollregion=canvas_izquierda.bbox("all"))
 
@@ -1204,7 +1195,7 @@ canvas_izquierda.bind("<Configure>", expandir_canvas)
 
 frame_izquierda.columnconfigure(0, weight=1)
 
-# === Frame superior: Datos paciente ===
+# BOTONES VIDEOS
 frame_superior = tk.Frame(frame_izquierda)
 frame_superior.grid(row=0, column=0, sticky="ew", padx=10, pady=5)
 for i in range(4):
@@ -1221,7 +1212,7 @@ entry_sesion = tk.Entry(frame_superior, state="readonly")
 entry_sesion.grid(row=0, column=3, sticky="ew", padx=5)
 
 '''
-# === Botones principales + Timer ===
+
 frame_botones = tk.Frame(frame_izquierda)
 frame_botones.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
 
@@ -1239,28 +1230,27 @@ frame_timer = tk.LabelFrame(frame_botones, text="Timer")
 frame_timer.grid(row=0, column=3, rowspan=2, padx=10)
 '''
 
-# === Botones principales + Timer ===
+
 frame_botones = tk.Frame(frame_izquierda)
 frame_botones.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
 
-# Configurar 3 columnas internas en frame_botones
+
 frame_botones.columnconfigure(0, weight=1)
 frame_botones.columnconfigure(1, weight=1)
 frame_botones.columnconfigure(2, weight=1)
 
-# Crear botones
+
 boton_empezar = tk.Button(frame_botones, text="EMPEZAR APLICACIÓN", bg="lightgreen")
 boton_parar = tk.Button(frame_botones, text="PARAR APLICACIÓN", bg="red", fg="white")
 
-# Ubicar botones en columnas separadas
+
 boton_empezar.grid(row=0, column=0, sticky="ew", padx=5)
 boton_parar.grid(row=0, column=1, sticky="ew", padx=5)
 
-# Crear y ubicar el timer
 frame_timer = tk.LabelFrame(frame_botones, text="Timer")
 frame_timer.grid(row=0, column=2, sticky="ew", padx=5)
 
-# === Frame Participante ===
+# PARTICIPANTES
 frame_participante = tk.LabelFrame(frame_botones, text="Participante")
 frame_participante.grid(row=0, column=4, rowspan=2, padx=10, sticky="nsew")
 frame_participante.columnconfigure(0, weight=1)
@@ -1286,7 +1276,7 @@ boton_empezar.config(command=lambda: [registrar_boton("EMPEZAR APLICACIÓN"), em
 boton_parar.config(command=lambda: [registrar_boton("PARAR APLICACIÓN"), parar_aplicacion()])
 
 '''
-# === Frame tareas ===
+
 frame_tareas = tk.Frame(frame_izquierda)
 frame_tareas.grid(row=3, column=0, sticky="nsew", padx=10, pady=10)
 frame_tareas.columnconfigure(1, weight=1)
@@ -1312,12 +1302,12 @@ def cargar_videos_ansiosos():
     return videos
 
 
-# === Archivos Gafas ===
+# ARCHIVOS DE LAS GAFAS
 frame_videos_gafas = tk.LabelFrame(frame_izquierda, text="Archivos de las Gafas", padx=5, pady=5)
 frame_videos_gafas.grid(row=4, column=0, sticky="ew", padx=10, pady=(0, 10))
 frame_videos_gafas.columnconfigure(0, weight=1)
 
-# === Dispositivo ===
+# DISPOSITIVOS
 frame_dispositivo = tk.LabelFrame(frame_izquierda, text="Dispositivo", padx=5, pady=5)
 frame_dispositivo.grid(row=5, column=0, sticky="ew", padx=10, pady=(0, 10))
 frame_dispositivo.columnconfigure(1, weight=1)
@@ -1341,7 +1331,7 @@ else:
     battery_entry.insert(0, "No device found")
 
 btn_devices = tk.Button(frame_dispositivo, text="Conectar dispositivo",
-                        command=conectar_y_actualizar)  # connect_devices_adb()
+                        command=conectar_y_actualizar)
 btn_devices.grid(row=2, column=0, columnspan=2, pady=5, sticky="ew")
 
 mirror_button = tk.Button(frame_dispositivo, text="Ver vista de las gafas", command=mirror_hmd_view)
@@ -1350,9 +1340,9 @@ mirror_button.grid(row=3, column=0, columnspan=2, pady=5, sticky="ew")
 cargar_videos = tk.Button(frame_dispositivo, text="Acceder archivos gafas", command=cargar_escenas_gafas)
 cargar_videos.grid(row=4, column=0, columnspan=2, pady=5, sticky="ew")
 
-# === Mirror vista gafas ===
 
-# === Volumen ===
+
+
 frame_volumen = tk.LabelFrame(frame_izquierda, text="Volumen", padx=10, pady=5)
 frame_volumen.grid(row=6, column=0, sticky="ew", padx=10, pady=(0, 10))
 frame_volumen.columnconfigure(0, weight=1)
@@ -1361,15 +1351,15 @@ volumen_slider = tk.Scale(frame_volumen, from_=0, to=100, orient="horizontal", l
 volumen_slider.set(50)
 volumen_slider.grid(row=0, column=0, sticky="ew")
 
-# === Botones dinámicos por archivo === Creacioón de botón de archvios por carpeta
+
 # frame_archivos = tk.LabelFrame(frame_izquierda, text="Archivos de Carpeta", padx=10, pady=5)
 # frame_archivos.grid(row=8, column=0, sticky="ew", padx=10, pady=(0, 10))
 
 # btn_cargar_carpeta = tk.Button(frame_archivos, text="Seleccionar carpeta", command=crear_botones_desde_carpeta)
 # btn_cargar_carpeta.pack(fill="x", padx=5, pady=5)
 
-''' DANI
-# === Botones de videos encontrados en carpeta ===
+''' 
+
 frame_videos_dinamicos = tk.LabelFrame(frame_izquierda, text="Videos de Carpeta", padx=10, pady=5)
 frame_videos_dinamicos.grid(row=9, column=0, sticky="ew", padx=10, pady=(0, 10))
 
@@ -1387,12 +1377,10 @@ frame_galeria_videos.pack(fill="both", expand=True)
 
 
 
-##MARTA
-# === Botones de videos neutros en carpeta ===
+
 frame_videos_dinamicos = tk.LabelFrame(frame_izquierda, text="Videos 360 - Escenarios Neutros", padx=10, pady=5)
 frame_videos_dinamicos.grid(row=9, column=0, sticky="ew", padx=10, pady=(0, 10))
 
-# Subframe para los botones de cargar y borrar en la misma fila pero en dos columnas
 frame_botones_neutros = tk.Frame(frame_videos_dinamicos)
 frame_botones_neutros.pack(fill="x", padx=5, pady=5)
 
@@ -1421,7 +1409,7 @@ def subir_videos_ansiosos():
     barra.pack(fill="x", padx=10, pady=10)
 
     def hilo_subida():
-        ruta_remota = "/sdcard/Movies/EscenariosAnsiosos"  # CAMBIADA
+        ruta_remota = "/sdcard/Movies/EscenariosAnsiosos"
 
         for i, ruta_local in enumerate(archivos):
             nombre_original = os.path.basename(ruta_local)
@@ -1564,11 +1552,11 @@ btn_cargar_videos.pack(fill="x", padx=5, pady=5)
 frame_galeria_videos = tk.Frame(frame_videos_dinamicos)
 frame_galeria_videos.pack(fill="both", expand=True)
 
-# === Botones de videos ansiosos en carpeta ===
+# BOTONES ANSIOSOS
 frame_videos_dinamicos_ansioso = tk.LabelFrame(frame_izquierda, text="Videos 360 - Escenarios Ansiosos", padx=10, pady=5)
 frame_videos_dinamicos_ansioso.grid(row=10, column=0, sticky="ew", padx=10, pady=(0, 10))
 
-# Subframe para los botones de cargar y borrar en la misma fila pero en dos columnas
+# FRAME CARGA VÍDEOS
 frame_botones = tk.Frame(frame_videos_dinamicos_ansioso)
 frame_botones.pack(fill="x", padx=5, pady=5)
 
@@ -1610,8 +1598,7 @@ frame_galeria_videos.pack(fill="both", expand=True)
 frame_galeria_videos_ansiosos = tk.Frame(frame_videos_dinamicos_ansioso)
 frame_galeria_videos_ansiosos.pack(fill="both", expand=True)
 '''
-# === Botones de imágenes encontradas en carpeta ===
-frame_imagenes_dinamicas = tk.LabelFrame(frame_izquierda, text="Imágenes de Carpeta", padx=10, pady=5)
+¡frame_imagenes_dinamicas = tk.LabelFrame(frame_izquierda, text="Imágenes de Carpeta", padx=10, pady=5)
 frame_imagenes_dinamicas.grid(row=11, column=0, sticky="ew", padx=10, pady=(0, 10))
 
 btn_cargar_imagenes = tk.Button(frame_imagenes_dinamicas, text="Seleccionar carpeta de imágenes",
@@ -1622,7 +1609,7 @@ imagen_preview_label = tk.Label(frame_imagenes_dinamicas, bg="white", relief="su
 imagen_preview_label.pack(fill="both", padx=5, pady=5)
 '''
 
-# === Votacion ===
+# VOTACIÓN -> DESARROLLAR EN UN FUTURO
 frame_votacion = tk.Frame(frame_izquierda)
 frame_votacion.grid(row=8, column=0, sticky="ew", padx=10, pady=(0, 10))
 frame_votacion.columnconfigure((0, 1, 2), weight=1)
@@ -1642,7 +1629,7 @@ tk.Button(frame_votacion, text="Votación errónea", command=lambda: registrar_b
                                                                                                              pady=2,
                                                                                                              sticky="ew")
 '''
-# === Gafas (parte derecha) ===
+
 frame_gafas = tk.LabelFrame(frame_contenido, text="Vista de Gafas", bg="white", padx=5, pady=5)
 frame_gafas.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
 frame_gafas.columnconfigure(0, weight=1)
@@ -1684,7 +1671,7 @@ def actualizar_sesion_en_formulario():
         entry_sesion.configure(state="readonly")
 
 
-# === Generar Informe ===
+#INFORME
 btn_generar_informe = tk.Button(frame_izquierda, text="Generar informe", bg="#4da6ff", fg="white",
                                 font=("Segoe UI", 10, "bold"), command=mostrar_informe)
 btn_generar_informe.grid(row=11, column=0, sticky="ew", padx=10, pady=(0, 10))
@@ -1717,7 +1704,7 @@ def ver_vista_tablet():
         return
 
     ventana = Toplevel()
-    ventana.title(f"Vista de los biosensores ({ip})")  # ← Cambio aquí
+    ventana.title(f"Vista de los biosensores ({ip})")
     lbl = Label(ventana)
     lbl.pack()
 
